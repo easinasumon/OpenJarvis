@@ -463,9 +463,7 @@ def chat(
             except Exception:
                 logger.debug("Failed to inject memory context", exc_info=True)
 
-        # Generate response even when optional memory context is unavailable.
-        try:
-            if agent is not None:
+        # Generate response even when optional memory context is unavailable.\n        voice_streamed = False\n        try:\n            if agent is not None:
                 from openjarvis.agents._stubs import AgentContext
 
                 agent_context = AgentContext()
