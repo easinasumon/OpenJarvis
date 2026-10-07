@@ -104,6 +104,7 @@ desktop = [
 # present on PATH (brew install espeak-ng) for out-of-dictionary words.
 voice = [
     "kokoro>=0.9",
+    "transformers>=4.33",
     "soundfile>=0.12",
     "sounddevice>=0.5",  # play_wav / record_until_silence in speech/voice_io.py
     "numpy>=1.24",
