@@ -102,3 +102,28 @@ def test_explicit_unhealthy_backend_is_unavailable() -> None:
         return_value=backend,
     ):
         assert get_speech_backend(config) is None
+
+
+def test_create_faster_whisper_passes_language_config() -> None:
+    """Configured STT language reaches the faster-whisper backend."""
+    from openjarvis.speech._discovery import _create_backend
+
+    config = JarvisConfig()
+    config.speech.language = "bn"
+    backend_cls = MagicMock()
+
+    with patch(
+        "openjarvis.core.registry.SpeechRegistry.contains",
+        return_value=True,
+    ), patch(
+        "openjarvis.core.registry.SpeechRegistry.get",
+        return_value=backend_cls,
+    ):
+        _create_backend("faster-whisper", config)
+
+    backend_cls.assert_called_once_with(
+        model_size=config.speech.model,
+        device=config.speech.device,
+        compute_type=config.speech.compute_type,
+        language="bn",
+    )
