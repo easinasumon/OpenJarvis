@@ -164,6 +164,23 @@ def record_voice(
         return None
 
 
+def _speech_chunks(text: str, max_chars: int = 220) -> list[str]:
+    """Split long replies into small speakable chunks for lower TTS latency."""
+    chunks: list[str] = []
+    current = ""
+    for char in text:
+        current += char
+        if char in ".!?।\n" and current.strip():
+            chunks.append(current.strip())
+            current = ""
+        elif len(current) >= max_chars and char.isspace():
+            chunks.append(current.strip())
+            current = ""
+    if current.strip():
+        chunks.append(current.strip())
+    return chunks or ([text.strip()] if text.strip() else [])
+
+
 def speak(text: str, console: Any, session: VoiceSession | None = None) -> None:
     """Synthesize and play text, reusing a healthy backend for the session."""
     from openjarvis.speech.voice_io import play_wav
@@ -184,9 +201,10 @@ def speak(text: str, console: Any, session: VoiceSession | None = None) -> None:
             synth_kwargs: dict[str, Any] = {"output_format": "wav", "speed": speed}
             if voice_id:
                 synth_kwargs["voice_id"] = voice_id
-            result = backend.synthesize(text, **synth_kwargs)
-            if result.audio:
-                play_wav(result.audio, sample_rate=result.sample_rate)
+            for chunk in _speech_chunks(text):
+                result = backend.synthesize(chunk, **synth_kwargs)
+                if result.audio:
+                    play_wav(result.audio, sample_rate=result.sample_rate)
             return
         except Exception as exc:
             console.print(
