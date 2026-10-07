@@ -220,4 +220,46 @@ def speak(text: str, console: Any, session: VoiceSession | None = None) -> None:
     )
 
 
-__all__ = ["VOICE_EXIT", "VoiceSession", "read_voice_input", "record_voice", "speak"]
+async def stream_speak_response(
+    token_stream: Any,
+    console: Any,
+    session: VoiceSession,
+) -> str:
+    """Speak complete sentence chunks while the model is still streaming."""
+    import asyncio
+
+    full_parts: list[str] = []
+    pending = ""
+
+    async for token in token_stream:
+        if not token:
+            continue
+        full_parts.append(token)
+        pending += token
+
+        while True:
+            boundary_positions = [
+                pos
+                for mark in (".", "!", "?", "।", "\n")
+                if (pos := pending.find(mark)) >= 0
+            ]
+            if boundary_positions:
+                cut = min(boundary_positions) + 1
+            elif len(pending) >= 220:
+                space = pending.rfind(" ", 0, 220)
+                cut = space if space > 40 else 220
+            else:
+                break
+
+            chunk = pending[:cut].strip()
+            pending = pending[cut:].lstrip()
+            if chunk:
+                await asyncio.to_thread(speak, chunk, console, session)
+
+    tail = pending.strip()
+    if tail:
+        await asyncio.to_thread(speak, tail, console, session)
+
+    return "".join(full_parts)
+
+__all__ = ["VOICE_EXIT", "VoiceSession", "read_voice_input", "record_voice", "speak", "stream_speak_response"]
