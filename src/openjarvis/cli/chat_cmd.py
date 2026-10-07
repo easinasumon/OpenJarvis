@@ -481,7 +481,7 @@ def chat(
                 for msg in history[:-1]:
                     if msg.role != Role.SYSTEM:
                         agent_context.conversation.add(msg)
-                if voice_mode and hasattr(agent, "stream"):
+                if voice_mode and agent_key == "simple" and hasattr(agent, "stream"):
                     import asyncio
 
                     assert voice_session is not None
