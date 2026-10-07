@@ -310,6 +310,27 @@ class BaseAgent(ABC):
 
         return result
 
+    async def _stream_generate(
+        self,
+        messages: list[Message],
+        **extra_kwargs: Any,
+    ):
+        """Stream model tokens with the same defaults used by _generate()."""
+        gen_kwargs = {
+            key: value
+            for key, value in self._engine_options.items()
+            if key in _ALLOWED_ENGINE_OPTION_KEYS
+        }
+        gen_kwargs.update(extra_kwargs)
+        async for token in self._engine.stream(
+            messages,
+            model=self._model,
+            temperature=self._temperature,
+            max_tokens=self._max_tokens,
+            **gen_kwargs,
+        ):
+            yield token
+
     def _max_turns_result(
         self,
         tool_results: list[ToolResult],
