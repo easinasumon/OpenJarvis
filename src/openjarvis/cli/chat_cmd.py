@@ -13,7 +13,13 @@ from rich.markup import escape
 
 from openjarvis.cli._runtime_panel import runtime_cli_options
 from openjarvis.cli._tool_names import resolve_tool_names
-from openjarvis.cli._voice_chat import (\n    VOICE_EXIT,\n    VoiceSession,\n    read_voice_input,\n    speak,\n    stream_speak_response,\n)
+from openjarvis.cli._voice_chat import (
+    VOICE_EXIT,
+    VoiceSession,
+    read_voice_input,
+    speak,
+    stream_speak_response,
+)
 from openjarvis.core.config import load_config
 from openjarvis.core.events import EventBus
 from openjarvis.core.types import Message, Role
@@ -463,7 +469,10 @@ def chat(
             except Exception:
                 logger.debug("Failed to inject memory context", exc_info=True)
 
-        # Generate response even when optional memory context is unavailable.\n        voice_streamed = False\n        try:\n            if agent is not None:
+        # Generate response even when optional memory context is unavailable.
+        voice_streamed = False
+        try:
+            if agent is not None:
                 from openjarvis.agents._stubs import AgentContext
 
                 agent_context = AgentContext()
