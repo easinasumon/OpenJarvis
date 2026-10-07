@@ -53,6 +53,31 @@ def test_faster_whisper_transcribe():
         assert result.duration_seconds == 1.5
 
 
+def test_faster_whisper_uses_configured_language():
+    """Configured language is forwarded to faster-whisper."""
+    mock_model = MagicMock()
+    mock_info = MagicMock()
+    mock_info.language = "bn"
+    mock_info.language_probability = 1.0
+    mock_info.duration = 1.0
+    mock_model.transcribe.return_value = ([], mock_info)
+
+    with patch(
+        "openjarvis.speech.faster_whisper.WhisperModel",
+        return_value=mock_model,
+    ):
+        backend = FasterWhisperBackend(
+            model_size="base",
+            device="cpu",
+            compute_type="int8",
+            language="bn",
+        )
+        backend.transcribe(b"fake audio bytes")
+
+    mock_model.transcribe.assert_called_once()
+    assert mock_model.transcribe.call_args.kwargs["language"] == "bn"
+
+
 def test_faster_whisper_transcribe_temp_file_reopenable_and_removed():
     """The temp file must be closed before the model reads it, and gone after.
 
