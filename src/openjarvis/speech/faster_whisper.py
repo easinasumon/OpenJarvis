@@ -123,7 +123,13 @@ class FasterWhisperBackend(SpeechBackend):
                 if resolved_language:
                     kwargs["language"] = resolved_language
 
-                segments_iter, info = model.transcribe(tmp.name, **kwargs)
+                segments_iter, info = model.transcribe(
+                    tmp.name,
+                    beam_size=1,
+                    vad_filter=True,
+                    condition_on_previous_text=False,
+                    **kwargs,
+                )
                 segments_list = list(segments_iter)
             finally:
                 try:
