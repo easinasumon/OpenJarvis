@@ -34,10 +34,12 @@ class FasterWhisperBackend(SpeechBackend):
         model_size: str = "base",
         device: str = "auto",
         compute_type: str = "float16",
+        language: str = "",
     ) -> None:
         self._model_size = model_size
         self._device = device
         self._compute_type = compute_type
+        self._language = language
         self._model: Optional[WhisperModel] = None
         self._last_error: Optional[str] = None
 
@@ -117,8 +119,9 @@ class FasterWhisperBackend(SpeechBackend):
                     tmp.write(audio)
 
                 kwargs = {}
-                if language:
-                    kwargs["language"] = language
+                resolved_language = language or self._language
+                if resolved_language:
+                    kwargs["language"] = resolved_language
 
                 segments_iter, info = model.transcribe(tmp.name, **kwargs)
                 segments_list = list(segments_iter)
