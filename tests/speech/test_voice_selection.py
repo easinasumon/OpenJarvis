@@ -41,7 +41,7 @@ def test_configured_voice_used_for_its_own_backend():
     assert speed == 1.0
 
 
-@pytest.mark.parametrize("other", ["openai_tts", "cartesia", "unknown"])
+@pytest.mark.parametrize("other", ["openai_tts", "cartesia", "elevenlabs", "unknown"])
 def test_kokoro_voice_never_leaks_to_other_backends(other):
     voice_id, _ = _session().voice_for_backend(_Backend(other))
     assert voice_id != "bm_george"
@@ -64,6 +64,15 @@ def test_cartesia_voice_routes_back_to_cartesia_only():
     assert session.voice_for_backend(_Backend("kokoro"))[0] == "bm_george"
 
 
+def test_elevenlabs_voice_routes_to_elevenlabs_only():
+    session = _session(tts_backend="elevenlabs", voice_id="QAmlwgbPtjxpk7u98Qs9")
+    assert (
+        session.voice_for_backend(_Backend("elevenlabs"))[0] == "QAmlwgbPtjxpk7u98Qs9"
+    )
+    # ...and must not be handed to Kokoro/OpenAI/Cartesia on fallback.
+    assert session.voice_for_backend(_Backend("kokoro"))[0] != "QAmlwgbPtjxpk7u98Qs9"
+
+
 def test_zero_speed_is_not_silently_rewritten():
     assert _session(voice_speed=0.0).get_voice_preferences()[2] == 0.0
 
@@ -81,7 +90,9 @@ def test_warning_emitted_once_per_backend():
     assert len(printed) == 1
 
 
-@pytest.mark.parametrize("preferred", ["kokoro", "openai_tts", "cartesia"])
+@pytest.mark.parametrize(
+    "preferred", ["kokoro", "openai_tts", "cartesia", "elevenlabs"]
+)
 def test_configured_backend_is_tried_before_healthy_fallbacks(monkeypatch, preferred):
     import openjarvis.speech  # noqa: F401
     from openjarvis.core.registry import TTSRegistry

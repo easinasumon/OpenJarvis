@@ -156,3 +156,20 @@ def test_tts_unique_filenames_no_overwrite(tmp_path):
     assert first.content != second.content
     assert Path(first.content).exists()
     assert Path(second.content).exists()
+
+
+def test_tts_tool_elevenlabs_receives_voice_id(tmp_path):
+    from openjarvis.tools.text_to_speech import TextToSpeechTool
+
+    registry, backend = _mock_backend(fmt="mp3")
+    with patch("openjarvis.tools.text_to_speech.TTSRegistry", registry):
+        result = TextToSpeechTool().execute(
+            text="Hello",
+            backend="elevenlabs",
+            voice_id="QAmlwgbPtjxpk7u98Qs9",
+            output_dir=str(tmp_path),
+        )
+
+    assert result.success is True
+    registry.contains.assert_called_with("elevenlabs")
+    assert backend.synthesize.call_args.kwargs["voice_id"] == "QAmlwgbPtjxpk7u98Qs9"

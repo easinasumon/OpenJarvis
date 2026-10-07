@@ -506,6 +506,26 @@ def test_cartesia_digest_tts_and_credential_are_reported_without_leak(
     assert report.verdict == "cloud-capable data boundaries configured"
 
 
+def test_elevenlabs_digest_tts_and_credential_are_reported_without_leak(
+    tmp_path,
+    monkeypatch,
+):
+    config = _low_noise_config()
+    config.digest.enabled = True
+    config.digest.tts_backend = "elevenlabs"
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "secret-elevenlabs-key")
+
+    report = build_data_boundary_report(config, tmp_path)
+    payload = report.to_dict(show_paths=True)
+
+    findings = {finding.id: finding for finding in report.findings}
+    assert findings["cloud-tts-backend-configured"].status == "warn"
+    credential = findings["env-credential-elevenlabs_api_key"]
+    assert credential.status == "warn"
+    assert "ELEVENLABS_API_KEY is set" in credential.evidence
+    assert "secret-elevenlabs-key" not in str(payload)
+
+
 def test_skills_auto_sync_is_warn(tmp_path):
     config = _low_noise_config()
     config.skills.auto_sync = True

@@ -62,6 +62,125 @@ def test_cartesia_synthesize():
 
 
 # ---------------------------------------------------------------------------
+# ElevenLabs backend tests (no real network / paid API requests)
+# ---------------------------------------------------------------------------
+
+_USER_VOICE = "QAmlwgbPtjxpk7u98Qs9"
+
+
+def _fake_response(status=200, content=b"fake-mp3", text=""):
+    from unittest.mock import MagicMock
+
+    resp = MagicMock()
+    resp.status_code = status
+    resp.content = content
+    resp.text = text
+    return resp
+
+
+def test_elevenlabs_registered():
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    TTSRegistry.register_value("elevenlabs", ElevenLabsTTSBackend)
+    assert TTSRegistry.contains("elevenlabs")
+    assert TTSRegistry.get("elevenlabs") is ElevenLabsTTSBackend
+
+
+def test_elevenlabs_in_discovery_order():
+    from openjarvis.speech._tts_discovery import TTS_BACKEND_ORDER
+
+    assert "elevenlabs" in TTS_BACKEND_ORDER
+    # existing backends must remain, in their original relative order
+    assert [b for b in TTS_BACKEND_ORDER if b != "elevenlabs"] == [
+        "kokoro",
+        "openai_tts",
+        "cartesia",
+    ]
+
+
+def test_elevenlabs_reads_key_only_from_env(monkeypatch):
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    assert ElevenLabsTTSBackend().health() is False
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "env-key")
+    backend = ElevenLabsTTSBackend()
+    assert backend.health() is True
+    assert backend._api_key == "env-key"
+
+
+def test_elevenlabs_default_model_supports_bengali(monkeypatch):
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    monkeypatch.delenv("ELEVENLABS_MODEL", raising=False)
+    # eleven_multilingual_v2 does NOT cover Bengali; eleven_v3 does.
+    assert ElevenLabsTTSBackend(api_key="k")._model == "eleven_v3"
+
+
+def test_elevenlabs_synthesize_request_shape():
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    backend = ElevenLabsTTSBackend(api_key="fake-key")
+    with patch(
+        "openjarvis.speech.elevenlabs_tts.httpx.post",
+        return_value=_fake_response(content=b"fake-mp3-bytes"),
+    ) as post:
+        result = backend.synthesize("আসসালামু আলাইকুম, hello", voice_id=_USER_VOICE)
+
+    assert result.audio == b"fake-mp3-bytes"
+    assert result.format == "mp3"
+    assert result.voice_id == _USER_VOICE
+    assert result.metadata["backend"] == "elevenlabs"
+
+    args, kwargs = post.call_args
+    # speech.voice_id is passed through to the ElevenLabs URL
+    assert args[0] == f"https://api.elevenlabs.io/v1/text-to-speech/{_USER_VOICE}"
+    assert kwargs["headers"] == {"xi-api-key": "fake-key"}
+    assert kwargs["params"] == {"output_format": "mp3_44100_128"}
+    assert kwargs["json"]["model_id"] == "eleven_v3"
+    assert kwargs["json"]["text"] == "আসসালামু আলাইকুম, hello"
+    assert "voice_settings" not in kwargs["json"]  # speed 1.0 -> not sent
+
+
+def test_elevenlabs_speed_is_clamped():
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    backend = ElevenLabsTTSBackend(api_key="fake-key")
+    with patch(
+        "openjarvis.speech.elevenlabs_tts.httpx.post",
+        return_value=_fake_response(),
+    ) as post:
+        backend.synthesize("hi", voice_id=_USER_VOICE, speed=3.0)
+    assert post.call_args.kwargs["json"]["voice_settings"] == {"speed": 1.2}
+
+
+def test_elevenlabs_requires_api_key_and_voice(monkeypatch):
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    with patch("openjarvis.speech.elevenlabs_tts.httpx.post") as post:
+        with pytest.raises(RuntimeError, match="ELEVENLABS_API_KEY"):
+            ElevenLabsTTSBackend().synthesize("hi", voice_id=_USER_VOICE)
+        with pytest.raises(RuntimeError, match="voice"):
+            ElevenLabsTTSBackend(api_key="k").synthesize("hi")
+        post.assert_not_called()
+
+
+def test_elevenlabs_http_error_never_leaks_key():
+    from openjarvis.speech.elevenlabs_tts import ElevenLabsTTSBackend
+
+    backend = ElevenLabsTTSBackend(api_key="super-secret-key")
+    bad = _fake_response(status=402, text="paid_plan_required super-secret-key")
+    with patch("openjarvis.speech.elevenlabs_tts.httpx.post", return_value=bad):
+        with pytest.raises(RuntimeError) as exc:
+            backend.synthesize("hi", voice_id=_USER_VOICE)
+    assert "402" in str(exc.value)
+    assert "paid_plan_required" in str(exc.value)
+    assert "super-secret-key" not in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
 # Kokoro backend tests
 # ---------------------------------------------------------------------------
 

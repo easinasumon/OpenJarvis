@@ -53,7 +53,7 @@ The current checks cover:
 - local knowledge.db composition with cloud-capable Deep Research targets
 - server binding and unauthenticated A2A exposure
 - channel enablement, channel credential fields, and channel credential env vars
-- skills, skill auto-sync, digest sources, and cloud speech/TTS backends such as Cartesia
+- skills, skill auto-sync, digest sources, and cloud speech/TTS backends such as Cartesia or ElevenLabs
 - local stores such as `knowledge.db`, `credentials.toml`, `memory.db`, `traces.db`,
   `telemetry.db`, `scheduler.db`, embeddings, skill index, `.vault_key`, and memory files
 - connector credential files under `connectors/*.json`, without reading them

@@ -1,0 +1,19 @@
+# ElevenLabs text-to-speech (Bengali + English)
+# Merge this [speech] section into ~/.openjarvis/config.toml
+#
+# The API key is NEVER stored in this file. Set it as an environment
+# variable instead:
+#   Windows (PowerShell):  setx ELEVENLABS_API_KEY "your-key"   (then reopen the terminal)
+#   macOS / Linux:         export ELEVENLABS_API_KEY="your-key"
+#
+# Usage:
+#   jarvis chat --voice
+
+[speech]
+tts_backend = "elevenlabs"
+voice_id = "QAmlwgbPtjxpk7u98Qs9"   # your ElevenLabs Voice ID
+voice_speed = 1.0                    # ElevenLabs accepts 0.7 - 1.2
+
+# Optional: choose another ElevenLabs model with an environment variable
+#   ELEVENLABS_MODEL=eleven_flash_v2_5
+# Default is eleven_v3, the model that supports Bengali.
